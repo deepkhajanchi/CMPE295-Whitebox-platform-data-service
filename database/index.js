@@ -1,7 +1,7 @@
 const Sequelize = require('sequelize')
 
 let db = {};
-let db_url = process.env.DATABASE_URL || "postgres://postgres:root@localhost:5432/cmpe295";
+let db_url = process.env.DATABASE_URL || "postgres://postgres:root@localhost:5432/cmpe295b";
 
 
 if (!db_url) {
@@ -114,7 +114,7 @@ else {
         db.Result.belongsTo(db.Test);
 
         db.NodeResult.belongsTo(db.Result);
-        db.Neuron.belongsTo(db.Result);
+        db.NodeResult.belongsTo(db.Neuron);
     }
 }
 
