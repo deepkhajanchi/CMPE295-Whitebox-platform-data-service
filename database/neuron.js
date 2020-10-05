@@ -13,11 +13,11 @@ module.exports = function (sequelize, DataTypes) {
         type: {
             type: DataTypes.TEXT,
             allowNull: false,
-        },
-        activationFunction: {
+		},
+		activationFunction: {
             type: DataTypes.TEXT,
             allowNull: false,
-        },
+		}
 	});
 };
 
