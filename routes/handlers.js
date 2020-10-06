@@ -41,6 +41,31 @@ module.exports.getTest = function(req, res){
     })
 }
 
+module.exports.getTestResult = function(req, res){
+    const { testId } = req.params;
+    database.Result.findAll({
+        include: [{
+            model: database.Test,
+            where: {
+                id: testId,
+                profileId: 1
+            }
+        }]
+    }).then(function(results){
+        if (results.length == 0){
+            return res.status(404).send({
+                error: "NOT_FOUND"
+            })
+        }
+
+        let result = results[0];
+
+        return res.send(result);
+    }, function(err){
+        return res.status(500).send(err);
+    })
+}
+
 module.exports.createTest = function(req, res){
     const {name, imageUrl, profileId} = req.body;
 
@@ -278,7 +303,7 @@ module.exports.getLayers = function (req, res) {
 
 module.exports.getNeurons = function(req, res){
     const { testId, layerId } = req.params;
-    const { offset = 0, limit = 10 , type} = req.query;
+    const { offset = 0, limit = 10 , type, minBias, maxBias, minOutput, maxOutput } = req.query;
 
     function handleDBError(){
         return res.status(500).send(err);
@@ -313,12 +338,24 @@ module.exports.getNeurons = function(req, res){
             }
             let layer = layers[0];
 
+            let nodeResultWhere = {
+                resultId: result.id
+            }
+
+            if (!isNaN(minOutput)){
+                nodeResultWhere.output = nodeResultWhere.output || {};
+                nodeResultWhere.output.$gte = Number(minOutput);
+            }
+
+            if (!isNaN(maxOutput)){
+                nodeResultWhere.output = nodeResultWhere.output || {};
+                nodeResultWhere.output.$lte = Number(maxOutput);
+            }
+
             database.NodeResult.findAll({
                 offset: offset,
                 limit: limit + 1,
-                where: {
-                    resultId: result.id
-                },
+                where: nodeResultWhere,
                 include: [{
                     model: database.Neuron,
                     where: {
