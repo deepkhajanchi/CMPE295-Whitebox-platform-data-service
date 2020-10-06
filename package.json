@@ -18,6 +18,8 @@
   },
   "homepage": "https://github.com/hieu-tran-1991/cmpe295-data-service#readme",
   "dependencies": {
+    "body-parser": "^1.19.0",
+    "moment": "^2.29.0",
     "sequelize": "^6.3.5"
   }
 }
