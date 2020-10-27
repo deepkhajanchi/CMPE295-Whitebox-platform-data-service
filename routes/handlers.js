@@ -1,5 +1,6 @@
 const database = require("../database");
 const moment = require("moment");
+const dataset = require("../database/dataset");
 
 module.exports.getTests = function(req, res){
     database.Test.findAll({
@@ -287,7 +288,8 @@ module.exports.getLayers = function (req, res) {
                     return {
                         id: l.id,
                         name: l.name,
-                        type: l.type
+                        type: l.type,
+                        data: l.data
                     }
                 }),
                 pagination: {
@@ -380,4 +382,140 @@ module.exports.getNeurons = function(req, res){
             }, handleDBError)
         }, handleDBError)
     }, handleDBError)
+}
+
+module.exports.getDatasets = function(req, res){
+    const { offset = 0, limit = 10 , name } = req.query;
+
+    database.Dataset.findAll({
+        offset: offset,
+        limit: limit + 1,
+        where: {
+           profileId: 1
+        }
+    }).then(function(datasets){
+        return res.send({
+            data: datasets,
+            pagination: {
+                currentOffset: Number(offset),
+                limit: Number(limit),
+                hasNext: datasets.length > limit,
+                hasPrev: offset > 0
+            }
+        })
+    }, function (err){
+        return res.status(500).send(err);
+    })
+}
+
+module.exports.getDataset = function(req, res){
+    const { datasetId } = req.params;
+    
+
+    function handleDBError(){
+        return res.status(500).send(err);
+    }
+
+    function handleNotFound(){
+        return res.status(404).send(err);
+    }
+
+    database.Dataset.findAll({
+        where: {
+           profileId: 1,
+           id: datasetId
+        }
+    }).then(function(datasets){
+        if (datasets.length == 0){
+            return handleNotFound();
+        }
+
+        const dataset = datasets[0]; 
+
+        return res.send(dataset)
+    }, function (err){
+        return res.status(500).send(err);
+    })
+}
+
+module.exports.createDataset = function(req, res){
+    const { name } = req.body;
+
+    if (!name){
+        return res.status(400).send({
+            error: "MISSING_REQUIRED_NAME"
+        })
+    }
+    
+    database.Dataset.create({
+        name,
+        profileId: 1
+    }).then(function(dataset){
+        return res.status(201).send(dataset);
+    }, function(err){
+        return res.status(500).send(err);
+    })
+}
+
+module.exports.createDatasetItem = function(req, res){
+    const { datasetId } = req.params;
+    const { url } = req.body;
+
+    if (!url){
+        return res.status(400).send({
+            error: "MISSING_REQUIRED_URL"
+        })
+    }
+
+    database.Dataset.findAll({
+        where: {
+           profileId: 1,
+           id: datasetId
+        }
+    }).then(function(datasets){
+        if (datasets.length == 0){
+            return res.send({
+                error: "DATASET_NOT_FOUND"
+            });
+        }
+    
+        database.DatasetItem.create({
+            url,
+            datasetId: datasets[0].id
+        }).then(function(datasetItem){
+            return res.status(201).send(datasetItem);
+        }, function(err){
+            return res.status(500).send(err);
+        })
+    })
+}
+
+module.exports.deleteDatasetItem = function(req, res){
+    const { datasetId, datasetItemId } = req.params;
+    database.DatasetItem.destroy({
+        where: {
+            id: datasetItemId,
+            datasetId: datasetId
+        }
+    }).then(function(){
+        return res.send({
+            status: "ok"
+        });
+    }, function(err){
+        return res.status(500).send(err);
+    })
+}
+
+module.exports.getDatasetItems = function(req, res){
+    const { datasetId } = req.params;
+
+    database.DatasetItem.findAll({
+        where: {
+           datasetId: datasetId
+        }
+    }).then(function(datasetItems){
+        return res.send(datasetItems)
+    }, function (err){
+        return res.status(500).send(err);
+    })
 }

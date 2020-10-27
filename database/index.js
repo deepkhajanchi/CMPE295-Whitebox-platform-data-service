@@ -95,7 +95,9 @@ else {
             Profile: require(__dirname + '/profile')(sq, Sequelize.DataTypes),
             Test: require(__dirname + '/test')(sq, Sequelize.DataTypes),
             Result: require(__dirname + '/result')(sq, Sequelize.DataTypes),
-            NodeResult: require(__dirname + '/nodeResult')(sq, Sequelize.DataTypes)
+            NodeResult: require(__dirname + '/nodeResult')(sq, Sequelize.DataTypes),
+            Dataset: require(__dirname + '/dataset')(sq, Sequelize.DataTypes),
+            DatasetItem: require(__dirname + '/datasetItem')(sq, Sequelize.DataTypes),
         };
 
         db.Configuration.belongsTo(db.Model);
@@ -110,6 +112,11 @@ else {
 
         db.Test.belongsTo(db.Profile);
         db.Test.belongsTo(db.Configuration);
+
+        db.Dataset.belongsTo(db.Profile);
+        db.Dataset.hasMany(db.DatasetItem, { as: 'items' });
+
+        db.DatasetItem.belongsTo(db.Dataset);
 
         db.Result.belongsTo(db.Test);
 

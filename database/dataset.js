@@ -1,5 +1,5 @@
 module.exports = function (sequelize, DataTypes) {
-	return sequelize.define('layer', {
+	return sequelize.define('dataset', {
 		id: {
 			type: DataTypes.INTEGER,
 			allowNull: false,
@@ -12,16 +12,6 @@ module.exports = function (sequelize, DataTypes) {
 			validate: {
 				notEmpty: true
 			}
-		},
-		type: {
-			type: DataTypes.TEXT,
-			allowNull: false,
-			validate: {
-				notEmpty: true
-			}
-		},
-		data: {
-			type: DataTypes.JSONB
 		}
 	});
 };

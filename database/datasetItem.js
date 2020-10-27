@@ -1,27 +1,17 @@
 module.exports = function (sequelize, DataTypes) {
-	return sequelize.define('layer', {
+	return sequelize.define('datasetItem', {
 		id: {
 			type: DataTypes.INTEGER,
 			allowNull: false,
 			autoIncrement: true,
 			primaryKey: true
 		},
-		name: {
+		url: {
 			type: DataTypes.TEXT,
 			allowNull: false,
 			validate: {
 				notEmpty: true
 			}
-		},
-		type: {
-			type: DataTypes.TEXT,
-			allowNull: false,
-			validate: {
-				notEmpty: true
-			}
-		},
-		data: {
-			type: DataTypes.JSONB
 		}
 	});
 };
