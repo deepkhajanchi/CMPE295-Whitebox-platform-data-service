@@ -1,7 +1,7 @@
 const Sequelize = require('sequelize')
 
 let db = {};
-let db_url = process.env.DATABASE_URL || "postgres://postgres:root@localhost:5432/cmpe295b";
+let db_url = process.env.DATABASE_URL || "postgres://postgres:root@localhost:5432/cmpe295b_v4";
 
 
 if (!db_url) {

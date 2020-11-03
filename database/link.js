@@ -1,9 +1,8 @@
 module.exports = function (sequelize, DataTypes) {
 	return sequelize.define('link', {
 		id: {
-			type: DataTypes.INTEGER,
+			type: DataTypes.TEXT,
 			allowNull: false,
-			autoIncrement: true,
 			primaryKey: true
 		},
 		weight: {

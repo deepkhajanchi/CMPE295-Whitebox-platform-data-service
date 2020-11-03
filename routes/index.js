@@ -20,6 +20,7 @@ router.delete('/tests', jsonParser, handlers.deleteTest);
 router.get('/tests/:testId', jsonParser, handlers.getTest);
 router.get('/tests/:testId/result', jsonParser, handlers.getTestResult);
 router.get('/tests/:testId/result/layers/', handlers.getLayers);
+router.get('/tests/:testId/result/layers/:layerId', handlers.getLayer);
 router.get('/tests/:testId/result/layers/:layerId/neurons', handlers.getNeurons);
 router.get('/tests/:testId/result/layers/:layerId/neurons/:neuronId', handlers.getSingleNeuronResult);
 

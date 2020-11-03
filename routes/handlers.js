@@ -5,7 +5,7 @@ const dataset = require("../database/dataset");
 module.exports.getTests = function(req, res){
     database.Test.findAll({
         where: {
-            profileId: 1
+            profileId: 2
         }
     }).then(function(tests){
         return res.send({
@@ -21,7 +21,7 @@ module.exports.getTest = function(req, res){
     database.Test.findAll({
         where: {
             id: testId,
-            profileId: 1
+            profileId: 2
         },
         include: [{
             model: database.Configuration,
@@ -49,7 +49,7 @@ module.exports.getTestResult = function(req, res){
             model: database.Test,
             where: {
                 id: testId,
-                profileId: 1
+                profileId: 2
             }
         }]
     }).then(function(results){
@@ -108,139 +108,186 @@ module.exports.deleteTest = function(req, res){
 
 module.exports.getSingleNeuronResult = function (req, res) {
     const { modelId, configurationId, layerId, neuronId, testId } = req.params;
+    function handleNotFound(err){
+        return res.status(404).send(err);
+    }
 
-    database.Neuron.findAll({
+    database.Test.findAll({
         where: {
-            id: Number(neuronId)
+            id: testId
         },
         include: [{
-            model: database.Layer
+            model: database.Configuration,
+            include: [{
+                model: database.Model
+            }]
         }]
-    }).then(function (neurons) {
-        let neuron = neurons[0];
-        if (!neuron) {
-            return res.status(404).send({
-                error: "NOT_FOUND"
-            })
-        }
-        database.Link.findAll({
+    }).then(function(tests){
+        const test = tests[0];
+
+        database.Neuron.findAll({
             where: {
-                destId: neuron.id
+                id: neuronId
             },
             include: [{
-                model: database.Neuron,
-                as: "source",
-                include: [{
-                    model: database.Layer
-                }]
+                model: database.Layer
             }]
-        }).then(function (sourceNeurons) {
-            let nodeResults = [];
-            new Promise(function (ok, ko) {
-                if (sourceNeurons.length == 0) {
-                    return ok();
-                }
-
+        }).then(function (neurons) {
+            let neuron = neurons[0];
+            if (!neuron) {
+                return res.status(404).send({
+                    error: "NOT_FOUND"
+                })
+            }
+            database.Link.findAll({
+                where: {
+                    destId: neuron.id
+                },
+                include: [{
+                    model: database.Neuron,
+                    as: "source",
+                    include: [{
+                        model: database.Layer
+                    }]
+                }]
+            }).then(function (sourceNeurons) {
+                let nodeResults = [];
+                
                 database.Result.findAll({
                     include: [{
                         model: database.Test,
                         where: {
                             id: testId,
-                            profileId: 1
+                            profileId: 2
                         }
                     }]
                 }).then(function(results){
                     if (results.length == 0){
                         return handleNotFound();
                     }
-                    let result = results[0];
+                    const result = results[0];
 
-                    database.NodeResult.findAll({
-                        where: {
-                            id: sourceNeurons.map(function (item) { return item.source.id }),
-                            resultId: result.id
-                        }
-                    }).then(function (nodeResults0) {
-                        nodeResults = nodeResults0;
-                        return ok();
-                    }, function (err) {
-                        return ko(err);
-                    })
-                })
-            }).then(function () {
-                let input = sourceNeurons.map(function (item) {
-                    let result = nodeResults.find(function (r) { return r.neuronId == item.source.id })
-                    return {
-                        id: item.source.id,
-                        weight: item.weight,
-                        value: result.output,
-                        layer: {
-                            id: item.source.layer.id,
-                            name: item.source.layer.name
-                        }
-                    }
-                })
 
-                database.Link.findAll({
-                    where: {
-                        sourceId: neuron.id
-                    },
-                    include: [{
-                        model: database.Neuron,
-                        as: "dest",
-                        include: [{
-                            model: database.Layer
-                        }]
-                    }]
-                }).then(function (destLinks) {
-                    let outputs = destLinks.map(function (destLink) {
-                        return {
-                            id: destLink.dest.id,
-                            weight: destLink.weight,
-                            layer: {
-                                id: destLink.dest.layer.id,
-                                name: destLink.dest.layer.name
+                    new Promise(function (ok, ko) {
+                        if (sourceNeurons.length == 0) {
+                            return ok();
+                        }
+        
+                        database.NodeResult.findAll({
+                            where: {
+                                neuronId: sourceNeurons.map(function (item) { return item.source.id }),
+                                resultId: result.id
                             }
-                        }
+                        }).then(function (nodeResults0) {
+                            nodeResults = nodeResults0;
+                            return ok();
+                        }, function (err) {
+                            return ko(err);
+                        })
+                    }).then(function () {
+                        let input = sourceNeurons.map(function (item) {
+                            let result = nodeResults.find(function (r) { return r.neuronId == item.source.id })
+                            return {
+                                id: item.source.id,
+                                weight: item.weight,
+                                value: result.output,
+                                layer: {
+                                    id: item.source.layer.id,
+                                    name: item.source.layer.name
+                                }
+                            }
+                        })
+        
+                        database.Link.findAll({
+                            where: {
+                                sourceId: neuron.id
+                            },
+                            include: [{
+                                model: database.Neuron,
+                                as: "dest",
+                                include: [{
+                                    model: database.Layer
+                                }]
+                            }]
+                        }).then(function (destLinks) {
+                            let outputs = destLinks.map(function (destLink) {
+                                return {
+                                    id: destLink.dest.id,
+                                    weight: destLink.weight,
+                                    layer: {
+                                        id: destLink.dest.layer.id,
+                                        name: destLink.dest.layer.name
+                                    }
+                                }
+                            })
+        
+                            database.NodeResult.findAll({
+                                where: {
+                                    neuronId: neuron.id,
+                                    resultId: result.id
+                                }
+                            }).then(function(nodeResults){
+                                const nodeResult = nodeResults[0];
+                                return res.send({
+                                    model: {
+                                        id: test.configuration.model.id,
+                                        name: test.configuration.model.name
+                                    },
+                                    configuration: {
+                                        id: test.configuration.id,
+                                        name: test.configuration.name
+                                    },
+                                    test: {
+                                        id: test.id,
+                                        name: test.name
+                                    },
+                                    id: neuron.id,
+                                    bias: neuron.bias,
+                                    activationFunction: neuron.activationFunction,
+                                    output: nodeResult.output,
+                                    layer: {
+                                        id: neuron.layer.id,
+                                        name: neuron.layer.name
+                                    },
+                                    input: input,
+                                    outputs: outputs
+                                });
+                            })
+                        })
+                    }, function (err) {
+                        return res.status(500).send(err)
                     })
-
-                    return res.send({
-                        model: {
-                            id: 1,
-                            name: modelId
-                        },
-                        configuration: {
-                            id: 1,
-                            name: "Sample Configuration"
-                        },
-                        test: {
-                            id: 1,
-                            name: "First Test"
-                        },
-                        id: neuron.id,
-                        bias: neuron.bias,
-                        activationFunction: neuron.activationFunction,
-                        output: 0.21,
-                        layer: {
-                            id: neuron.layer.id,
-                            name: neuron.layer.name
-                        },
-                        input: input,
-                        outputs: outputs
-                    });
                 })
             }, function (err) {
-                return res.status(500).send(err)
+                return res.status(500).send({
+                    error: "INTERNAL_ERROR"
+                })
             })
+    
+    
         }, function (err) {
-            return res.status(500).send({
-                error: "INTERNAL_ERROR"
-            })
+            return res.send(err);
         })
+    })
+}
 
+module.exports.getLayer = function (req, res) {
+    const { modelId, configurationId, layerId, neuronId, testId } = req.params;
 
-    }, function (err) {
-        return res.send(err);
+    database.Layer.findAll({
+        where: {
+            id: layerId
+        }
+    }).then(function(layers){
+        const layer = layers[0];
+        if (layer){
+            return res.send(layer);
+        }
+        else {
+            return res.status(404).send({
+                error: "NOT_FOUND"
+            })
+        }
     })
 }
 
@@ -259,7 +306,7 @@ module.exports.getLayers = function (req, res) {
     database.Test.findAll({
         where: {
             id: testId,
-            profileId: 1
+            profileId: 2
         },
         include: [{
             model: database.Configuration
@@ -307,7 +354,7 @@ module.exports.getNeurons = function(req, res){
     const { testId, layerId } = req.params;
     const { offset = 0, limit = 10 , type, minBias, maxBias, minOutput, maxOutput } = req.query;
 
-    function handleDBError(){
+    function handleDBError(err){
         return res.status(500).send(err);
     }
 
@@ -320,7 +367,7 @@ module.exports.getNeurons = function(req, res){
             model: database.Test,
             where: {
                 id: testId,
-                profileId: 1
+                profileId: 2
             }
         }]
     }).then(function(results){
@@ -369,6 +416,8 @@ module.exports.getNeurons = function(req, res){
                     data: nodeResults.slice(0, limit).map(function(nr){
                         return {
                             id: nr.neuron.id,
+                            bias: nr.neuron.bias,
+                            activationFunction: nr.neuron.activationFunction,
                             output: nr.output
                         }
                     }),
@@ -391,7 +440,7 @@ module.exports.getDatasets = function(req, res){
         offset: offset,
         limit: limit + 1,
         where: {
-           profileId: 1
+           profileId: 2
         }
     }).then(function(datasets){
         return res.send({
@@ -422,7 +471,7 @@ module.exports.getDataset = function(req, res){
 
     database.Dataset.findAll({
         where: {
-           profileId: 1,
+           profileId: 2,
            id: datasetId
         }
     }).then(function(datasets){
@@ -449,7 +498,7 @@ module.exports.createDataset = function(req, res){
     
     database.Dataset.create({
         name,
-        profileId: 1
+        profileId: 2
     }).then(function(dataset){
         return res.status(201).send(dataset);
     }, function(err){
@@ -469,7 +518,7 @@ module.exports.createDatasetItem = function(req, res){
 
     database.Dataset.findAll({
         where: {
-           profileId: 1,
+           profileId: 2,
            id: datasetId
         }
     }).then(function(datasets){
