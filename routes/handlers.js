@@ -1,6 +1,11 @@
 const database = require("../database");
 const moment = require("moment");
-const dataset = require("../database/dataset");
+const formidable = require("formidable");
+const path = require("path");
+const fs = require("fs");
+const qs = require("querystring");
+const rqst = require("request");
+const ML_SERVER = process.env.ML_SERVER || "http://localhost:2000";
 
 module.exports.getTests = function(req, res){
     database.Test.findAll({
@@ -68,22 +73,38 @@ module.exports.getTestResult = function(req, res){
 }
 
 module.exports.createTest = function(req, res){
-    const {name, imageUrl, profileId} = req.body;
+    const {name, modelId, cId, profileId} = req.body;
 
     // TODO: validate imageUrl
 
-    database.Test.create({
-        name,
-        input: imageUrl, 
-        status: "RUNNING",
-        profileId: profileId,
-        timestamp: moment()
-    }).then(function(test){
-        return res.send({
-            status: "ok"
-        });
-    }, function(err){
-        return res.status(500).send(err);
+    // database.Test.create({
+    //     name,
+    //     input: imageUrl, 
+    //     status: "RUNNING",
+    //     profileId: profileId,
+    //     timestamp: moment()
+    // }).then(function(test){
+    //     return res.send({
+    //         status: "ok"
+    //     });
+    // }, function(err){
+    //     return res.status(500).send(err);
+    // })
+
+    // let http://127.0.0.1:2000/test?profileId=2&modelId=23&cId=22&name=grape22
+
+    let params = {
+        profileId,
+        modelId,
+        cId,
+        name
+    }
+
+    rqst({
+        url: `${ML_SERVER}/test?${qs.stringify(params)}`,
+        method: "GET"
+    }, function(err, res1, body){
+        return res.send("ok")
     })
 }
 
@@ -328,7 +349,10 @@ module.exports.getLayers = function (req, res) {
         database.Layer.findAll({
             offset: offset,
 			limit: limit + 1,
-            where: layerQuery
+            where: layerQuery,
+            order: [
+                ['createdAt'],
+            ]
         }).then(function(layers){
             return res.send({
                 data: layers.slice(0, limit).map(function(l){
@@ -369,7 +393,10 @@ module.exports.getNeurons = function(req, res){
                 id: testId,
                 profileId: 2
             }
-        }]
+        }],
+        order: [
+            ['createdAt', 'DESC'],
+        ]
     }).then(function(results){
         if (results.length == 0){
             return handleNotFound();
@@ -449,6 +476,51 @@ module.exports.getDatasets = function(req, res){
                 currentOffset: Number(offset),
                 limit: Number(limit),
                 hasNext: datasets.length > limit,
+                hasPrev: offset > 0
+            }
+        })
+    }, function (err){
+        return res.status(500).send(err);
+    })
+}
+
+module.exports.getModels = function(req, res){
+    const { offset = 0, limit = 10 , name, profileId, status } = req.query;
+
+    let options = {
+        // offset: offset,
+        // limit: limit + 1,
+        include: [{
+            model: database.Model,
+            where: {
+                profileId
+            }
+        }]
+    }
+
+    if (status){
+        options.where = {
+            status: status
+        }
+    }
+
+    database.Configuration.findAll(options).then(function(configurations){
+        return res.send({
+            data: configurations.map(function(item){
+                let model = item.model;
+                return {
+                    id: model.id,
+                    cId: item.id,
+                    name: model.name,
+                    status: item.status,
+                    createdAt: model.createdAt,
+                    updatedAt: model.updatedAt
+                }
+            }),
+            pagination: {
+                currentOffset: Number(offset),
+                limit: Number(limit),
+                hasNext: configurations.length > limit,
                 hasPrev: offset > 0
             }
         })
@@ -567,4 +639,58 @@ module.exports.getDatasetItems = function(req, res){
     }, function (err){
         return res.status(500).send(err);
     })
+}
+module.exports.login = function(req, res){
+    const { username, password } = req.body;
+
+    database.Profile.findAll({
+        where: {
+           username,
+           password
+        }
+    }).then(function(profiles){
+        const profile = profiles[0];
+        return res.send({
+            profile
+        })
+    }, function (err){
+        return res.status(500).send(err);
+    })
+}
+
+module.exports.importModel = function(req, res){
+    let form = new formidable.IncomingForm(),
+    files = [],
+    filenames = [],
+    fields = {};
+    form.on('field', function(field, value) {
+        fields[field] = value;
+    })
+    form.on('file', function(field, file) {
+        const oldPath = file.path; 
+        const newPath = path.join(__dirname, '../public/uploads') + '/' + file.name;
+        const rawData = fs.readFileSync(oldPath) 
+
+        // Should upload to common storage instead
+        fs.writeFile(newPath, rawData, function(err){});
+        files.push(`http://localhost:5000/uploads/${file.name}`);
+        filenames.push(`${file.name}`);
+    })
+    form.on('end', function() {
+        console.log('done');
+        let params = {
+            profileId: fields.profileId,
+            fileUrl: files[0],
+            fileName: filenames[0]
+        }
+        rqst({
+            url: `${ML_SERVER}/import?${qs.stringify(params)}`,
+            method: "GET"
+        }, function(err, resa, body){
+            return res.send({
+                status: "ok"
+            })
+        })
+    });
+    form.parse(req);
 }

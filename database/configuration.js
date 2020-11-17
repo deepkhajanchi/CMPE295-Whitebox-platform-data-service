@@ -12,6 +12,10 @@ module.exports = function (sequelize, DataTypes) {
 			validate: {
 				notEmpty: true
 			}
+		},
+		status: {
+            type: DataTypes.TEXT,
+			allowNull: false
         },
         isOriginal: {
             type: DataTypes.BOOLEAN,

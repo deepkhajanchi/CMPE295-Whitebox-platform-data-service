@@ -12,6 +12,9 @@ module.exports = function (sequelize, DataTypes) {
 			validate: {
 				notEmpty: true
 			}
+		},
+		path: {
+			type: DataTypes.TEXT,
 		}
 	});
 };

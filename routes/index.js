@@ -6,6 +6,11 @@ let router = express.Router();
 
 const jsonParser = bodyParser.json();
 
+router.post('/login', jsonParser, handlers.login);
+
+router.get('/models', handlers.getModels);
+router.post('/models', handlers.importModel);
+
 router.get('/datasets', handlers.getDatasets);
 router.post('/datasets', jsonParser, handlers.createDataset);
 router.get('/datasets/:datasetId', handlers.getDataset);

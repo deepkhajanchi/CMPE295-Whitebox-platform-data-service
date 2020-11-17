@@ -16,6 +16,8 @@ database.sequelize.sync().then(() => {
         next();
     });
 
+    app.use(express.static('public'))
+
     app.use('/', routes);
 
     app.listen(port, () => {

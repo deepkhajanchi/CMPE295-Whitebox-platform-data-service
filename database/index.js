@@ -100,6 +100,8 @@ else {
             DatasetItem: require(__dirname + '/datasetItem')(sq, Sequelize.DataTypes),
         };
 
+        db.Model.belongsTo(db.Profile);
+
         db.Configuration.belongsTo(db.Model);
         db.Layer.belongsTo(db.Configuration);
         db.Neuron.belongsTo(db.Layer);
