@@ -8,9 +8,11 @@ const rqst = require("request");
 const ML_SERVER = process.env.ML_SERVER || "http://localhost:2000";
 
 module.exports.getTests = function(req, res){
+    const { profileId } = req.query;
+
     database.Test.findAll({
         where: {
-            profileId: 2
+            profileId
         }
     }).then(function(tests){
         return res.send({
@@ -73,7 +75,7 @@ module.exports.getTestResult = function(req, res){
 }
 
 module.exports.createTest = function(req, res){
-    const {name, modelId, cId, profileId} = req.body;
+    const {name, modelId, cId, profileId, dataPath} = req.body;
 
     // TODO: validate imageUrl
 
@@ -97,7 +99,8 @@ module.exports.createTest = function(req, res){
         profileId,
         modelId,
         cId,
-        name
+        name,
+        dataPath
     }
 
     rqst({
