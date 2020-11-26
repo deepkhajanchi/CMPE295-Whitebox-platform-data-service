@@ -25,10 +25,12 @@ module.exports.getTests = function(req, res){
 
 module.exports.getTest = function(req, res){
     const { testId } = req.params;
+    const { profileId } = req.query;
+
     database.Test.findAll({
         where: {
             id: testId,
-            profileId: 2
+            profileId
         },
         include: [{
             model: database.Configuration,
@@ -75,7 +77,7 @@ module.exports.getTestResult = function(req, res){
 }
 
 module.exports.createTest = function(req, res){
-    const {name, modelId, cId, profileId, dataPath} = req.body;
+    const {name, modelId, cId, profileId, datasetId} = req.body;
 
     // TODO: validate imageUrl
 
@@ -100,7 +102,7 @@ module.exports.createTest = function(req, res){
         modelId,
         cId,
         name,
-        dataPath
+        datasetId
     }
 
     rqst({
@@ -132,6 +134,8 @@ module.exports.deleteTest = function(req, res){
 
 module.exports.getSingleNeuronResult = function (req, res) {
     const { modelId, configurationId, layerId, neuronId, testId } = req.params;
+    const { profileId } = req.query;
+
     function handleNotFound(err){
         return res.status(404).send(err);
     }
@@ -182,7 +186,7 @@ module.exports.getSingleNeuronResult = function (req, res) {
                         model: database.Test,
                         where: {
                             id: testId,
-                            profileId: 2
+                            profileId
                         }
                     }]
                 }).then(function(results){
@@ -317,20 +321,25 @@ module.exports.getLayer = function (req, res) {
 
 module.exports.getLayers = function (req, res) {
     const { testId } = req.params;
-    const { offset = 0, limit = 10 , type} = req.query;
+    const { offset = 0, limit = 10 , type, profileId} = req.query;
 
-    function handleDBError(){
-        return res.status(500).send(err);
+    function handleDBError(err){
+        console.log("==== err: " , err)
+        return res.status(500).send({
+            message: "DB_ERROR"
+        });
     }
 
     function handleNotFound(){
-        return res.status(404).send(err);
+        return res.status(404).send({
+            message: "NOT_FOUND"
+        });
     }
 
     database.Test.findAll({
         where: {
             id: testId,
-            profileId: 2
+            profileId
         },
         include: [{
             model: database.Configuration
@@ -379,13 +388,13 @@ module.exports.getLayers = function (req, res) {
 
 module.exports.getNeurons = function(req, res){
     const { testId, layerId } = req.params;
-    const { offset = 0, limit = 10 , type, minBias, maxBias, minOutput, maxOutput } = req.query;
+    const { offset = 0, limit = 10 , type, minBias, maxBias, minOutput, maxOutput, profileId } = req.query;
 
     function handleDBError(err){
         return res.status(500).send(err);
     }
 
-    function handleNotFound(){
+    function handleNotFound(err){
         return res.status(404).send(err);
     }
 
@@ -394,7 +403,7 @@ module.exports.getNeurons = function(req, res){
             model: database.Test,
             where: {
                 id: testId,
-                profileId: 2
+                profileId
             }
         }],
         order: [
@@ -402,7 +411,9 @@ module.exports.getNeurons = function(req, res){
         ]
     }).then(function(results){
         if (results.length == 0){
-            return handleNotFound();
+            return handleNotFound({
+                error: "RESULT_NOT_FOUND"
+            });
         }
 
         let result = results[0];
@@ -413,7 +424,9 @@ module.exports.getNeurons = function(req, res){
             }
         }).then(function(layers){
             if (layers.length == 0){
-                return handleNotFound();
+                return handleNotFound({
+                    error: "LAYER_NOT_FOUND"
+                });
             }
             let layer = layers[0];
 
@@ -464,15 +477,20 @@ module.exports.getNeurons = function(req, res){
 }
 
 module.exports.getDatasets = function(req, res){
-    const { offset = 0, limit = 10 , name } = req.query;
+    const { offset = 0, limit = 10 , profileId, modelId } = req.query;
 
-    database.Dataset.findAll({
+    let options = {
         offset: offset,
         limit: limit + 1,
         where: {
-           profileId: 2
+           profileId: profileId
         }
-    }).then(function(datasets){
+    }
+    if (modelId){
+        options.where.modelId = modelId;
+    }
+
+    database.Dataset.findAll(options).then(function(datasets){
         return res.send({
             data: datasets,
             pagination: {
@@ -500,7 +518,7 @@ module.exports.getModels = function(req, res){
             }
         }]
     }
-
+ 
     if (status){
         options.where = {
             status: status
@@ -671,12 +689,12 @@ module.exports.importModel = function(req, res){
     })
     form.on('file', function(field, file) {
         const oldPath = file.path; 
-        const newPath = path.join(__dirname, '../public/uploads') + '/' + file.name;
+        const newPath = path.join(__dirname, '../public/uploads/models') + '/' + file.name;
         const rawData = fs.readFileSync(oldPath) 
 
         // Should upload to common storage instead
         fs.writeFile(newPath, rawData, function(err){});
-        files.push(`http://localhost:5000/uploads/${file.name}`);
+        files.push(`http://localhost:5000/uploads/models/${file.name}`);
         filenames.push(`${file.name}`);
     })
     form.on('end', function() {
@@ -696,4 +714,74 @@ module.exports.importModel = function(req, res){
         })
     });
     form.parse(req);
+}
+
+module.exports.importDataset = function(req, res){
+    let form = new formidable.IncomingForm(),
+    files = [],
+    filenames = [],
+    fields = {};
+    form.on('field', function(field, value) {
+        fields[field] = value;
+    })
+    form.on('file', function(field, file) {
+        const oldPath = file.path; 
+        const newPath = path.join(__dirname, '../public/uploads/datasets') + '/' + file.name;
+        const rawData = fs.readFileSync(oldPath) 
+
+        // Should upload to common storage instead
+        fs.writeFile(newPath, rawData, function(err){});
+        files.push(`http://localhost:5000/uploads/datasets/${file.name}`);
+        filenames.push(`${file.name}`);
+    })
+    form.on('end', function() {
+        console.log('done');
+        
+        const { name, profileId, modelId } = fields;
+
+        if (name, profileId, modelId, files[0]){
+            database.Dataset.create({
+                name,
+                profileId,
+                modelId,
+                path: files[0]
+            }).then(function(){
+                return res.send({
+                    status: "ok"
+                })
+            }, function(err){
+                return res.send({
+                    status: "fail",
+                    error: err
+                })
+            })
+        }
+        else {
+            return res.send({
+                status: "fail",
+                error: {
+                    message: "MISSING_REQUIRED_PARAMS"
+                }
+            })
+        }
+    });
+    form.parse(req);
+}
+
+module.exports.deleteDataset = function(req, res){
+    const { profileId } = req.query;
+    const { datasetId } = req.params;
+
+    database.Dataset.destroy({
+        where: {
+            profileId,
+            id: datasetId
+        }
+    }).then(function(){
+        return res.send({
+            status: "ok"
+        });
+    }, function(err){
+        return res.status(500).send(err);
+    })
 }

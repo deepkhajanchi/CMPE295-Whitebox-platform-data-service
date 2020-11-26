@@ -6,6 +6,13 @@ module.exports = function (sequelize, DataTypes) {
 			autoIncrement: true,
 			primaryKey: true
 		},
+		path: {
+			type: DataTypes.TEXT,
+			allowNull: false,
+			validate: {
+				notEmpty: true
+			}
+		},
 		name: {
 			type: DataTypes.TEXT,
 			allowNull: false,

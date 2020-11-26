@@ -1,7 +1,7 @@
 const Sequelize = require('sequelize')
 
 let db = {};
-let db_url = process.env.DATABASE_URL || "postgres://postgres:root@localhost:5432/cmpe295b_v4";
+let db_url = process.env.DATABASE_URL || "postgres://postgres:root@localhost:5432/cmpe295b_v5";
 
 
 if (!db_url) {
@@ -117,6 +117,8 @@ else {
 
         db.Dataset.belongsTo(db.Profile);
         db.Dataset.hasMany(db.DatasetItem, { as: 'items' });
+        
+        db.Dataset.belongsTo(db.Model);
 
         db.DatasetItem.belongsTo(db.Dataset);
 

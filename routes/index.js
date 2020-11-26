@@ -12,8 +12,9 @@ router.get('/models', handlers.getModels);
 router.post('/models', handlers.importModel);
 
 router.get('/datasets', handlers.getDatasets);
-router.post('/datasets', jsonParser, handlers.createDataset);
+router.post('/datasets', jsonParser, handlers.importDataset);//createDataset);
 router.get('/datasets/:datasetId', handlers.getDataset);
+router.delete('/datasets/:datasetId', handlers.deleteDataset);
 router.get('/datasets/:datasetId/items', handlers.getDatasetItems);
 router.post('/datasets/:datasetId/items', jsonParser, handlers.createDatasetItem);
 router.delete('/datasets/:datasetId/items/:datasetItemId', handlers.deleteDatasetItem);
