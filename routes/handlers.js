@@ -1,11 +1,11 @@
 const database = require("../database");
-const moment = require("moment");
 const formidable = require("formidable");
 const path = require("path");
 const fs = require("fs");
 const qs = require("querystring");
 const rqst = require("request");
 const ML_SERVER = process.env.ML_SERVER || "http://localhost:2000";
+const SERVER_URL = process.env.SERVER_URL || "http://localhost:5000";
 
 module.exports.getTests = function(req, res){
     const { profileId } = req.query;
@@ -694,7 +694,7 @@ module.exports.importModel = function(req, res){
 
         // Should upload to common storage instead
         fs.writeFile(newPath, rawData, function(err){});
-        files.push(`http://localhost:5000/uploads/models/${file.name}`);
+        files.push(`${SERVER_URL}/uploads/models/${file.name}`);
         filenames.push(`${file.name}`);
     })
     form.on('end', function() {
