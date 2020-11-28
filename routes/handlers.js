@@ -731,7 +731,7 @@ module.exports.importDataset = function(req, res){
 
         // Should upload to common storage instead
         fs.writeFile(newPath, rawData, function(err){});
-        files.push(`http://localhost:5000/uploads/datasets/${file.name}`);
+        files.push(`${SERVER_URL}/uploads/datasets/${file.name}`);
         filenames.push(`${file.name}`);
     })
     form.on('end', function() {
